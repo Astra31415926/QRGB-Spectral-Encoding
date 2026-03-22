@@ -3,6 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>▣ QRGB ULTRA - Stable v3.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: system-ui, sans-serif; }
+        canvas { image-rendering: pixelated; }
+        textarea { background: #0a0a0a; border: 1px solid #333; color: #fff; }
+        .scan-line { position:absolute; left:0; right:0; height:2px; background:#00ff41; box-shadow:0 0 15px #00ff41; animation:scan 3s linear infinite; z-index: 10; }
+        @keyframes scan { 0%{top:0%} 100%{top:100%} }
+        .flash-effect { animation: flash 0.3s ease-out forwards; }
+        @keyframes flash { 0%{opacity:1} 100%{opacity:0} }
+        .indicator { width: 12px; height: 12px; border-radius: 50%; background: #222; border: 1px solid rgba(255,255,255,0.1); }
+        .active-r { background: #ff004d; box-shadow: 0 0 10px #ff004d; }
+        .active-g { background: #00ff41; box-shadow: 0 0 10px #00ff41; }
+        .active-b { background: #0088ff; box-shadow: 0 0 10px #0088ff; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen p-4">
+
+    <div class="flex items-center justify-between mb-4">
+        <canvas id="mini-qr" width="44" height="44" class="rounded bg-zinc-900"></canvas>
+        <h1 class="text-xs tracking-widest font-bold text-zinc-400 uppercase">Engine v3.1 Stable</h1>
+        <div class="w-10"></div>
+    </div>
+
+    <div class="space-y-2 mb-6">
+        <textarea id="r-text" class="w-full p-3 rounded-xl border-l-4 border-red-500 outline-none h-12 text-sm" placeholder="Red..."></textarea>
+        <textarea id="g-text" class="w-full p-3 rounded-xl border-l-4 border-green-500 outline-none h-12 text-sm" placeholder="Green..."></textarea>
+        <textarea id="b-text" class="w-full p-3 rounded-xl border-l-4 border-blue-500 outline-none h-12 text-sm" placeholder="Blue (Priority)..."></textarea>
+    </div>
+
+    <div class="flex-1 flex items-center justify-center mb-6">
+        <div class="relative w-64 h-64 bg-zinc-950 rounded-3xl p-4 border border-white/5 shadow-2xl">
+            <canvas id="qr-main" width="512" height="512" class="w-full h-full opacity-0 transition-opacity duration-500"></canvas>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-bold rounded-2xl hidden active:scale-95 transition-transform">SAVE PNG</button>
+        <button onclick="toggleScanner()" class="w-full py-4 bg-zinc-800 text-white font-bold rounded-2xl border border-white/10 active:scale-95">OPEN SCANNER</button>
+    </div>
+
+    <div id="scanner-ui" class="fixed inset-0 z-[100] bg-black hidden flex flex-col p-6 overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Optical Sensor Mode</span>
+            <button onclick="toggleScanner()" class="text-white bg-zinc-800 px-4 py-2 rounded-lg text-xs font-bold">CLOSE</button>
+        </div>
+        
+        <div class="relative w-full aspect-square bg-zinc-950 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+            <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline></video>
+            <canvas id="freeze-frame" class="absolute inset-0 w-full h-full object-cover hidden"></canvas>
+            <div id="scan-line-view" class="scan-line"></div>
+            <div id="flash-layer" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-50"></div>
+        </div>
+
+        <div class="mt-4">
+            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(event)">
+            <button onclick="document.getElementById('file-input').click()" class="w-full py-3 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl text-xs font-bold uppercase tracking-widest">
+                📂 Select from Gallery
+            </button>
+        </div>
+
+        <div id="scan-results" class="mt-6 space-y-2">
+            <div id="res-r" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-white/5">
+                <div class="indicator"></div>
+                <span class="text-[10px] text-zinc-500 truncate">R: Waiting...</span>
+            </div>
+            <div id="res-g" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-white/5">
+                <div class="indicator"></div>
+                <span class="text-[10px] text-zinc-500 truncate">G: Waiting...</span>
+            </div>
+            <div id="res-b" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-blue-500/20">
+                <div class="indicator"></div>
+                <span class="text-[10px] text-zinc-400 font-bold truncate tracking-tight">B: Priority Mode</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const els = {
+            r: document.getElementById('r-text'),
+            g: document.getElementById('g-text'),
+            b: document.getElementById('b-text'),
+            main: document.getElementById('qr-main'),
+            mini: document.getElementById('mini-qr'),
+            video: document.getElementById('video'),
+            freeze: document.getElementById('freeze-frame')
+        };
+
+        // AUDIO ENGINE
+        const beep = (isFinal = false) => {
+            try {
+                const ac = new (window.AudioContext || window.webkitAudioContext)();
+                const os = ac.createOscillator();
+                const gn = ac.createGain();
+                os.type = isFinal ? 'square' : 'sine';
+                os.frequency.setValueAtTime(isFinal ? 150 : 880, ac.currentTime);
+                if(isFinal) os.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.1);
+                gn.gain.setValueAtTime(0.1, ac.currentTime);
+                gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.15);
+                os.connect(gn); gn.connect(ac.destination);
+                os.start(); os.stop(ac.currentTime + 0.2);
+            } catch(e) {}
+        };
+
+        // GENERATOR
+        function generateQR() {
+            const texts = [els.r.value, els.g.value, els.b.value];
+            if (!texts.some(t => t.trim())) {
+                els.main.style.opacity = 0;
+                document.getElementById('save-btn').classList.add('hidden');
+                return;
+            }
+
+            let maxVer = 1;
+            texts.forEach(t => {
+                if(!t.trim()) return;
+                const tmp = qrcode(0, 'M'); tmp.addData(t); tmp.make();
+                const v = Math.floor((tmp.getModuleCount() - 17) / 4);
+                if (v > maxVer) maxVer = v;
+            });
+
+            const ctx = els.main.getContext('2d');
+            ctx.fillStyle = "#000"; ctx.fillRect(0,0,512,512);
+            ctx.globalCompositeOperation = "lighten";
+
+            texts.forEach((text, i) => {
+                if(!text.trim()) return;
+                const qr = qrcode(maxVer, 'M'); qr.addData(text); qr.make();
+                const mod = 512 / qr.getModuleCount();
+                ctx.fillStyle = i === 0 ? "#FF0000" : (i === 1 ? "#00FF00" : "#0000FF");
+                for (let r = 0; r < qr.getModuleCount(); r++) {
+                    for (let c = 0; c < qr.getModuleCount(); c++) {
+                        if (qr.isDark(r, c)) ctx.fillRect(c * mod, r * mod, mod, mod);
+                    }
+                }
+            });
+
+            ctx.globalCompositeOperation = "source-over";
+            els.main.style.opacity = 1;
+            document.getElementById('save-btn').classList.remove('hidden');
+            els.mini.getContext('2d').drawImage(els.main, 0, 0, 44, 44);
+        }
+
+        [els.r, els.g, els.b].forEach(el => el.addEventListener('input', generateQR));
+
+        // SCANNER
+        let scanning = false;
+        let scanCaptured = false;
+        let results = {r:null, g:null, b:null};
+        let timer = null;
+
+        async function toggleScanner() {
+            const ui = document.getElementById('scanner-ui');
+            if (scanning) {
+                scanning = false;
+                if (els.video.srcObject) els.video.srcObject.getTracks().forEach(t => t.stop());
+                ui.classList.add('hidden');
+                els.freeze.classList.add('hidden');
+                document.getElementById('scan-line-view').classList.remove('hidden');
+            } else {
+                scanCaptured = false;
+                results = {r:null, g:null, b:null};
+                ['r','g','b'].forEach(ch => {
+                    const el = document.getElementById('res-'+ch);
+                    el.querySelector('span').textContent = ch.toUpperCase() + ': Waiting...';
+                    el.querySelector('.indicator').className = 'indicator';
+                });
+                ui.classList.remove('hidden');
+                try {
+                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    els.video.srcObject = s;
+                    els.video.play();
+                    scanning = true;
+                    requestAnimationFrame(scanFrame);
+                } catch (e) { alert("Camera Lock"); ui.classList.add('hidden'); }
+            }
+        }
+
+        function scanFrame() {
+            if (!scanning || scanCaptured) return;
+            if (els.video.readyState === els.video.HAVE_ENOUGH_DATA) {
+                const cv = document.createElement('canvas');
+                cv.width = els.video.videoWidth; cv.height = els.video.videoHeight;
+                const cx = cv.getContext('2d');
+                cx.drawImage(els.video, 0, 0);
+                const img = cx.getImageData(0,0,cv.width,cv.height);
+
+                [0,1,2].forEach(idx => {
+                    const ch = ['r','g','b'][idx];
+                    if (results[ch]) return;
+
+                    const mono = new Uint8ClampedArray(img.data.length);
+                    for (let i = 0; i < img.data.length; i += 4) {
+                        const v = img.data[i + idx];
+                        const others = (img.data[i+(idx+1)%3] + img.data[i+(idx+2)%3]) / 2;
+                        // Ослабленный порог для лучшей чувствительности
+                        const isMain = v > 110 && v > others * 1.2;
+                        mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
+                        mono[i+3] = 255;
+                    }
+
+                    const code = jsQR(mono, cv.width, cv.height);
+                    if (code) {
+                        results[ch] = code.data;
+                        const el = document.getElementById('res-'+ch);
+                        el.querySelector('span').textContent = code.data;
+                        el.querySelector('.indicator').classList.add('active-'+ch);
+                        
+                        if (ch === 'b') {
+                            doCapture();
+                        } else {
+                            beep(false);
+                            if(!timer) timer = setTimeout(doCapture, 1500);
+                        }
+                    }
+                });
+            }
+            requestAnimationFrame(scanFrame);
+        }
+
+        function doCapture() {
+            if (scanCaptured || !scanning) return;
+            scanCaptured = true;
+            clearTimeout(timer); timer = null;
+            els.freeze.width = els.video.videoWidth;
+            els.freeze.height = els.video.videoHeight;
+            els.freeze.getContext('2d').drawImage(els.video, 0, 0);
+            els.freeze.classList.remove('hidden');
+            document.getElementById('scan-line-view').classList.add('hidden');
+            document.getElementById('flash-layer').classList.add('flash-effect');
+            beep(true);
+            setTimeout(() => document.getElementById('flash-layer').classList.remove('flash-effect'), 400);
+        }
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const cv = document.createElement('canvas');
+                    cv.width = img.width; cv.height = img.height;
+                    const cx = cv.getContext('2d');
+                    cx.drawImage(img, 0, 0);
+                    const data = cx.getImageData(0,0,cv.width,cv.height);
+                    // Прогоняем фото через декодер
+                    [0,1,2].forEach(idx => {
+                        const ch = ['r','g','b'][idx];
+                        const mono = new Uint8ClampedArray(data.data.length);
+                        for (let i = 0; i < data.data.length; i += 4) {
+                            const v = data.data[i+idx];
+                            const others = (data.data[i+(idx+1)%3] + data.data[i+(idx+2)%3])/2;
+                            const isMain = v > 90 && v > others * 1.1;
+                            mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
+                            mono[i+3] = 255;
+                        }
+                        const code = jsQR(mono, cv.width, cv.height);
+                        if (code) {
+                            results[ch] = code.data;
+                            const el = document.getElementById('res-'+ch);
+                            el.querySelector('span').textContent = code.data;
+                            el.querySelector('.indicator').classList.add('active-'+ch);
+                        }
+                    });
+                    doCapture();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveQR() {
+            const a = document.createElement('a');
+            a.download = 'QRGB_SYNC.png';
+            a.href = els.main.toDataURL();
+            a.click();
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
     <title>▣ QRGB ULTRA - Pro Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
