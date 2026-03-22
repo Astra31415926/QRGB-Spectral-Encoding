@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QRGB</title>
+    <!-- Библиотека для генерации QR -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Библиотека для сканирования QR -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         body { background-color: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         h1 { margin-bottom: 20px; }
@@ -16,6 +19,18 @@
         #block-g { background-color: #44ff44; color: #000; text-shadow: none; }
         #block-b { background-color: #4444ff; }
         #qrcode { background: #fff; padding: 10px; border-radius: 8px; }
+        
+        /* Стили для загрузчика (соответствуют общему стилю) */
+        #upload { margin-top: 20px; cursor: pointer; }
+        #upload::file-selector-button {
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -36,7 +51,14 @@
 
     <div id="qrcode"></div>
 
+    <!-- Поле для загрузки изображения -->
+    <input type="file" id="upload" accept="image/*">
+
+    <!-- Скрытый canvas для обработки изображения -->
+    <canvas id="canvas-hidden" style="display: none;"></canvas>
+
     <script>
+        // --- Логика генерации (существующая) ---
         const qrcode = new QRCode(document.getElementById("qrcode"), {
             width: 160,
             height: 160,
@@ -62,6 +84,56 @@
 
         // Начальная генерация
         generate();
+
+
+        // --- Логика сканирования (новая) ---
+        const uploadInput = document.getElementById('upload');
+        const hiddenCanvas = document.getElementById('canvas-hidden');
+        const ctx = hiddenCanvas.getContext('2d');
+
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // Рисуем изображение на скрытом canvas
+                    hiddenCanvas.width = img.width;
+                    hiddenCanvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Получаем данные изображения
+                    const imageData = ctx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                    
+                    // Сканируем с помощью jsQR
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        // Парсим строку формата R:текст|G:текст|B:текст
+                        // Используем регулярное выражение для надежного извлечения
+                        const match = code.data.match(/^R:(.*?)\|G:(.*?)\|B:(.*)$/);
+                        
+                        if (match) {
+                            // match[1] - R, match[2] - G, match[3] - B
+                            document.getElementById('input-r').value = match[1];
+                            document.getElementById('input-g').value = match[2];
+                            document.getElementById('input-b').value = match[3];
+                            
+                            // Вызываем функцию генерации, чтобы обновить блоки и сгенерировать новый QR
+                            generate();
+                        } else {
+                            alert("QR-код найден, но формат не совпадает: " + code.data);
+                        }
+                    } else {
+                        alert("QR-код не найден на изображении.");
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
     </script>
 </body>
 </html>
