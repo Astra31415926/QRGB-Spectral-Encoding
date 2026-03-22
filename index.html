@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
-    <title>▣ QRGB Ultra</title>
+    <title>▣ QRGB Ultra - Final</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
     <style>
-        body { 
-            font-family: system-ui, -apple-system, sans-serif; 
-            background: #000; color: #e5e5e5; 
-        }
+        body { background: #000; color: #e5e5e5; font-family: system-ui, sans-serif; }
         canvas { image-rendering: pixelated; }
         textarea { 
             font-size: 16px; resize: none; min-height: 56px; 
@@ -20,340 +21,184 @@
             position:absolute; left:0; right:0; height:3px; 
             background:linear-gradient(90deg,transparent,#00ff41,transparent); 
             box-shadow:0 0 20px #00ff41; 
-            animation:scanLine 2.5s linear forwards; 
+            animation:scanLine 2.5s linear infinite; 
         }
-        @keyframes scanLine { 0%{top:0%;opacity:1} 100%{top:100%;opacity:0} }
-        @keyframes glitch { 0%,100%{transform:scale(1)} 25%{transform:scale(1.02)} 50%{transform:scale(0.98)} 75%{transform:scale(1.01)} }
-        .glitch { animation:glitch .6s; }
+        @keyframes scanLine { 0%{top:0%;} 100%{top:100%;} }
         @keyframes flash { 0%,100%{opacity:0} 50%{opacity:.6} }
         .flash { animation:flash .3s; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="fixed top-0 z-50 bg-black/95 backdrop-blur h-16 flex items-center px-4">
-        <canvas id="mini-qr" width="56" height="56" class="w-14 h-14 bg-gray-900 rounded-lg mr-4"></canvas>
-        <h1 class="flex-1 font-bold text-xl text-white text-center">▣ QRGB Ultra</h1>
-        <button onclick="showInfo()" class="p-3 rounded-xl hover:bg-white/10">
-            <svg fill="none" stroke="currentColor" class="w-6 h-6 text-gray-400" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-        </button>
+    <header class="fixed top-0 z-50 w-full bg-black/95 backdrop-blur h-16 flex items-center px-4 border-b border-white/10">
+        <canvas id="mini-qr" width="56" height="56" class="w-12 h-12 bg-gray-900 rounded-lg mr-4"></canvas>
+        <h1 class="flex-1 font-bold text-lg text-white text-center">▣ QRGB ULTRA</h1>
+        <div class="w-12"></div> 
     </header>
 
-    <!-- Generation -->
-    <div id="generate" class="flex-1 pt-20 pb-28 px-6 flex flex-col">
-        <div class="space-y-4 mb-8 max-h-[50vh] overflow-auto pb-20">
+    <main class="flex-1 pt-20 pb-28 px-6 flex flex-col max-w-md mx-auto w-full">
+        
+        <div class="space-y-4 mb-6">
             <div class="relative">
-                <div class="absolute left-3 top-4 w-2 h-12 bg-gradient-to-b from-[#ff004d] to-pink-500 rounded-full"></div>
-                <textarea id="r-text" class="w-full p-4 pl-12 rounded-2xl focus:border-[#ff004d] focus:ring-2 focus:ring-red-400/50 text-white placeholder-gray-400" placeholder="🔴 Red канал..."></textarea>
-            </div>
-            <div class="relative">
-                <div class="absolute left-3 top-4 w-2 h-12 bg-gradient-to-b from-[#00ff41] to-emerald-500 rounded-full"></div>
-                <textarea id="g-text" class="w-full p-4 pl-12 rounded-2xl focus:border-[#00ff41] focus:ring-2 focus:ring-green-400/50 text-white placeholder-gray-400" placeholder="🟢 Green канал..."></textarea>
+                <div class="absolute left-3 top-4 w-1.5 h-10 bg-[#ff004d] rounded-full"></div>
+                <textarea id="r-text" class="w-full p-4 pl-10 rounded-2xl focus:border-[#ff004d] outline-none transition-all" placeholder="Текст для Red..."></textarea>
             </div>
             <div class="relative">
-                <div class="absolute left-3 top-4 w-2 h-12 bg-gradient-to-b from-[#0088ff] to-sky-500 rounded-full"></div>
-                <textarea id="b-text" class="w-full p-4 pl-12 rounded-2xl focus:border-[#0088ff] focus:ring-2 focus:ring-blue-400/50 text-white placeholder-gray-400" placeholder="🔵 Blue канал..."></textarea>
+                <div class="absolute left-3 top-4 w-1.5 h-10 bg-[#00ff41] rounded-full"></div>
+                <textarea id="g-text" class="w-full p-4 pl-10 rounded-2xl focus:border-[#00ff41] outline-none transition-all" placeholder="Текст для Green..."></textarea>
+            </div>
+            <div class="relative">
+                <div class="absolute left-3 top-4 w-1.5 h-10 bg-[#0088ff] rounded-full"></div>
+                <textarea id="b-text" class="w-full p-4 pl-10 rounded-2xl focus:border-[#0088ff] outline-none transition-all" placeholder="Текст для Blue..."></textarea>
             </div>
         </div>
 
-        <div class="flex-1 flex items-center justify-center mb-8 max-h-80">
-            <div class="w-72 h-72 bg-white rounded-3xl shadow-2xl p-4 relative">
-                <div id="qr-empty" class="absolute inset-0 flex items-center justify-center text-gray-500 text-sm font-medium rounded-3xl bg-gradient-to-br from-gray-900/50 to-black/50">Введіть текст для генерації QR</div>
-                <canvas id="qr-main" width="256" height="256" class="w-full h-full rounded-2xl opacity-0"></canvas>
+        <div class="flex-1 flex items-center justify-center min-h-[300px]">
+            <div class="w-72 h-72 bg-white rounded-3xl shadow-2xl p-4 relative overflow-hidden">
+                <div id="qr-empty" class="absolute inset-0 flex items-center justify-center text-gray-400 text-xs text-center p-8 bg-gray-900/50">Введіть текст для генерації RGB-коду</div>
+                <canvas id="qr-main" width="256" height="256" class="w-full h-full rounded-lg opacity-0 transition-opacity"></canvas>
             </div>
         </div>
 
-        <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-bold rounded-2xl text-lg tracking-wider shadow-2xl hover:shadow-white/20 active:scale-[0.98] transition-all hidden">
-            📱 Скачати PNG
-        </button>
-    </div>
-
-    <!-- Scanner -->
-    <div id="scanner" class="flex-1 pt-20 pb-28 px-6 flex flex-col hidden">
-        <div class="relative w-full max-w-sm aspect-square mx-auto bg-gray-900 rounded-3xl border-4 border-gray-700 mb-8 overflow-hidden shadow-2xl max-h-[45vh]">
-            <video id="camera" class="absolute inset-0 object-cover hidden" playsinline muted></video>
-            <canvas id="scan-view" class="absolute inset-0 object-contain hidden" width="400" height="400"></canvas>
-            <div id="scan-frame" class="absolute inset-4 border-4 border-green-400/50 rounded-2xl hidden"></div>
-            <div id="flash-layer" class="absolute inset-0 bg-green-400 opacity-0"></div>
-            <div id="scan-start" class="absolute inset-0 flex flex-col items-center justify-center space-y-6">
-                <button onclick="startCamera()" class="w-28 h-28 bg-gradient-to-r from-green-500 to-emerald-500 rounded-3xl flex flex-col items-center justify-center text-black font-bold shadow-2xl hover:scale-105 active:scale-95">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-4.064 7-8.542 7-4.477 0-7.268-2.943-8.542-7z"/></svg>
-                    <span class="text-xs">Камера</span>
-                </button>
-                <button onclick="document.getElementById('file-pick').click()" class="w-28 h-28 bg-gradient-to-r from-blue-500 to-sky-500 rounded-3xl flex flex-col items-center justify-center text-black font-bold shadow-2xl hover:scale-105 active:scale-95">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01"/></svg>
-                    <span class="text-xs">Файл</span>
-                </button>
-            </div>
+        <div class="mt-6 space-y-3">
+            <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-bold rounded-2xl hidden">📱 Зберегти PNG</button>
+            <button onclick="toggleScanner()" class="w-full py-4 bg-zinc-800 text-white font-bold rounded-2xl border border-white/10">🔍 Сканувати / Камера</button>
         </div>
-        <div class="space-y-4 text-sm">
-            <div id="res-r" class="p-4 bg-gray-900/80 rounded-2xl border-l-4 border-red-500 cursor-pointer hover:bg-gray-800 transition-all">🔴 Red: <span>Очікування...</span></div>
-            <div id="res-g" class="p-4 bg-gray-900/80 rounded-2xl border-l-4 border-green-500 cursor-pointer hover:bg-gray-800 transition-all">🟢 Green: <span>Очікування...</span></div>
-            <div id="res-b" class="p-4 bg-gray-900/80 rounded-2xl border-l-4 border-blue-500 cursor-pointer hover:bg-gray-800 transition-all">🔵 Blue: <span>Очікування...</span></div>
+    </main>
+
+    <div id="scanner-ui" class="fixed inset-0 z-[100] bg-black hidden flex flex-col p-6">
+        <button onclick="toggleScanner()" class="self-end p-4 text-white">✕ Закрити</button>
+        <div class="relative w-full aspect-square bg-zinc-900 rounded-3xl overflow-hidden border-2 border-white/20">
+            <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline></video>
+            <div class="scan-line"></div>
+            <div id="flash-layer" class="absolute inset-0 bg-white opacity-0 pointer-events-none"></div>
+        </div>
+        <div id="scan-results" class="mt-8 space-y-2">
+            <div id="res-r" class="p-3 bg-red-900/20 border-l-4 border-red-500 rounded-lg text-sm">R: <span>-</span></div>
+            <div id="res-g" class="p-3 bg-green-900/20 border-l-4 border-green-500 rounded-lg text-sm">G: <span>-</span></div>
+            <div id="res-b" class="p-3 bg-blue-900/20 border-l-4 border-blue-500 rounded-lg text-sm">B: <span>-</span></div>
         </div>
     </div>
-
-    <!-- Modal -->
-    <div id="info-modal" class="fixed inset-0 z-[99] hidden bg-black/90 backdrop-blur flex items-center justify-center p-6">
-        <div id="info-content" class="bg-gray-900 w-full max-w-md max-h-[80vh] rounded-3xl border border-gray-700 p-8 overflow-auto text-sm leading-6 text-gray-200"></div>
-    </div>
-
-    <input type="file" id="file-pick" accept="image/*" class="hidden">
 
     <script>
-        let qrData = null, stream = null, scanning = false;
-        
-        // ВСІ елементи
         const els = {
-            inputs: {r:document.getElementById('r-text'), g:document.getElementById('g-text'), b:document.getElementById('b-text')},
-            canvas: {main:document.getElementById('qr-main'), mini:document.getElementById('mini-qr'), scan:document.getElementById('scan-view')},
-            results: {r:document.getElementById('res-r'), g:document.getElementById('res-g'), b:document.getElementById('res-b')}
+            r: document.getElementById('r-text'),
+            g: document.getElementById('g-text'),
+            b: document.getElementById('b-text'),
+            main: document.getElementById('qr-main'),
+            mini: document.getElementById('mini-qr'),
+            video: document.getElementById('video')
         };
 
-        // ✅ 1. QR ГЕНЕРАТОР (власний алгоритм)
-        function generateSimpleQR(text, size = 21) {
-            // Простий QR патерн (finder patterns + data)
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = size;
-            const ctx = canvas.getContext('2d');
-            
-            // Білий фон
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, 0, size, size);
-            
-            // 3 finder patterns
-            drawFinder(ctx, 0, 0, size);
-            drawFinder(ctx, size-7, 0, size);
-            drawFinder(ctx, 0, size-7, size);
-            
-            // Data pattern (hash від text)
-            let hash = 0;
-            for(let i=0; i<text.length; i++) hash += text.charCodeAt(i);
-            for(let y=7; y<size-7; y++) for(let x=7; x<size-7; x++) {
-                if((hash + x*y) % 23 < 12) {
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(x, y, 1, 1);
-                }
+        function generateQR() {
+            const texts = [els.r.value, els.g.value, els.b.value];
+            if (!texts.some(t => t.trim())) {
+                document.getElementById('qr-main').style.opacity = 0;
+                document.getElementById('qr-empty').style.opacity = 1;
+                document.getElementById('save-btn').classList.add('hidden');
+                return;
             }
-            return canvas;
-        }
 
-        function drawFinder(ctx, x, y, size) {
-            const s = 7;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(x, y, s, s);
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(x+1, y+1, s-2, s-2);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(x+2, y+2, s-4, s-4);
-        }
-
-        // ✅ 2. Рендер RGB QR
-        function renderQR() {
-            const texts = Object.values(els.inputs).map(i => i.value.trim() || '');
-            if (!texts.some(t => t)) return hideQR();
-            
             const size = 256;
-            const modSize = size / 21;
-            
-            // Головний canvas
-            const canvas = els.canvas.main;
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.height = size;
-            
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, 0, size, size);
-            
-            // 3 канали
-            ['r','g','b'].forEach((ch,i) => {
-                const qrCanvas = generateSimpleQR(texts[i]);
-                const qrCtx = qrCanvas.getContext('2d');
-                const imgData = qrCtx.getImageData(0,0,21,21);
-                
-                for(let p=0; p<imgData.data.length; p+=4) {
-                    if(imgData.data[p] === 0) { // чорний піксель
-                        const x = (p/4 % 21) * modSize;
-                        const y = Math.floor(p/4 / 21) * modSize;
-                        ctx.fillStyle = i===0 ? '#ff004d' : i===1 ? '#00ff41' : '#0088ff';
-                        ctx.fillRect(x, y, modSize, modSize);
+            const ctx = els.main.getContext('2d');
+            ctx.clearRect(0,0,size,size);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0,0,size,size);
+
+            // Режим наложения для RGB
+            ctx.globalCompositeOperation = "multiply";
+
+            texts.forEach((text, i) => {
+                if(!text.trim()) return;
+                const qr = qrcode(0, 'M');
+                qr.addData(text || " ");
+                qr.make();
+                const count = qr.getModuleCount();
+                const modSize = size / count;
+
+                ctx.fillStyle = i === 0 ? "#ff004d" : i === 1 ? "#00ff41" : "#0088ff";
+
+                for (let r = 0; r < count; r++) {
+                    for (let c = 0; c < count; c++) {
+                        if (qr.isDark(r, c)) {
+                            ctx.fillRect(c * modSize, r * modSize, modSize, modSize);
+                        }
                     }
                 }
             });
-            
-            // Мініатюра
-            const mini = els.canvas.mini;
-            const miniCtx = mini.getContext('2d');
-            miniCtx.imageSmoothingEnabled = false;
-            miniCtx.drawImage(canvas, 0, 0, 56, 56);
-            
-            showQR();
-        }
 
-        function showQR() {
+            ctx.globalCompositeOperation = "source-over";
+            els.main.style.opacity = 1;
+            document.getElementById('qr-empty').style.opacity = 0;
             document.getElementById('save-btn').classList.remove('hidden');
-            document.getElementById('qr-main').style.opacity = '1';
-            document.getElementById('qr-empty').style.opacity = '0';
-        }
-        function hideQR() {
-            document.getElementById('save-btn').classList.add('hidden');
-            document.getElementById('qr-main').style.opacity = '0';
-            document.getElementById('qr-empty').style.opacity = '1';
+            
+            // Обновить миниатюру
+            const mCtx = els.mini.getContext('2d');
+            mCtx.fillStyle = "#000"; mCtx.fillRect(0,0,56,56);
+            mCtx.drawImage(els.main, 0, 0, 56, 56);
         }
 
-        // ✅ 3. Event listeners
-        Object.values(els.inputs).forEach(input => {
-            input.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = this.scrollHeight + 'px';
-                renderQR();
-            });
-        });
+        [els.r, els.g, els.b].forEach(el => el.addEventListener('input', generateQR));
 
         function saveQR() {
-            const link = document.createElement('a');
-            link.download = 'QRGB.png';
-            link.href = els.canvas.main.toDataURL('image/png');
-            link.click();
+            const a = document.createElement('a');
+            a.download = 'qrgb_ultra.png';
+            a.href = els.main.toDataURL();
+            a.click();
         }
 
-        // ✅ 4. Сканер
-        let scanId = null;
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
-                document.getElementById('camera').srcObject = stream;
-                document.getElementById('camera').play();
-                document.getElementById('camera').classList.remove('hidden');
-                document.getElementById('scan-start').classList.add('hidden');
-                document.getElementById('scan-frame').classList.remove('hidden');
-                scanning = true;
-                scanLoop();
-            } catch(e) {
-                alert('Камера недоступна');
+        // --- SCANNER LOGIC ---
+        let scanning = false;
+        async function toggleScanner() {
+            const ui = document.getElementById('scanner-ui');
+            if (scanning) {
+                scanning = false;
+                if (els.video.srcObject) els.video.srcObject.getTracks().forEach(t => t.stop());
+                ui.classList.add('hidden');
+            } else {
+                ui.classList.remove('hidden');
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    els.video.srcObject = stream;
+                    els.video.play();
+                    scanning = true;
+                    requestAnimationFrame(scanFrame);
+                } catch (e) { alert("Камера недоступна"); ui.classList.add('hidden'); }
             }
         }
 
-        function scanLoop() {
+        function scanFrame() {
             if (!scanning) return;
-            
-            const video = document.getElementById('camera');
-            const canvas = els.canvas.scan;
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const results = decodeImage(imageData);
-            
-            // Тільки коли є результат
-            if (results.r || results.g || results.b) {
-                successScan(results);
-                return;
-            }
-            
-            scanId = requestAnimationFrame(scanLoop);
-        }
-
-        function decodeImage(imageData) {
-            const {width: w, height: h, data} = imageData;
-            const results = {r: null, g: null, b: null};
-            
-            // Простий декодер по кольорам
-            for(let i = 0; i < data.length; i += 4) {
-                const r = data[i], g = data[i+1], b = data[i+2];
-                const x = (i/4 % w), y = Math.floor(i/4 / w);
-                
-                // Детекція каналів по домінуючому кольору
-                if (r > 200 && g < 100 && b < 100) results.r = 'Red data';
-                if (g > 200 && r < 100 && b < 100) results.g = 'Green data';
-                if (b > 200 && r < 100 && g < 100) results.b = 'Blue data';
-            }
-            
-            return results;
-        }
-
-        function successScan(results) {
-            scanning = false;
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            if (scanId) cancelAnimationFrame(scanId);
-            
-            document.getElementById('flash-layer').classList.add('flash');
-            playSound();
-            
-            // Показ результатів
-            Object.entries(results).forEach(([ch, data]) => {
-                const el = els.results[ch];
-                el.querySelector('span').textContent = data || '∅';
-                el.onclick = () => navigator.clipboard.writeText(data || '').then(() => {
-                    const old = el.querySelector('span').textContent;
-                    el.querySelector('span').textContent = 'Скопійовано!';
-                    setTimeout(() => el.querySelector('span').textContent = old, 1000);
-                });
-            });
-        }
-
-        function playSound() {
-            try {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                osc.frequency.value = 800;
-                const gain = ctx.createGain();
-                gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.1);
-            } catch(e) {}
-        }
-
-        document.getElementById('file-pick').onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const img = new Image();
-            img.onload = () => {
-                const canvas = els.canvas.scan;
+            if (els.video.readyState === els.video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = els.video.videoWidth;
+                canvas.height = els.video.videoHeight;
                 const ctx = canvas.getContext('2d');
-                const scale = Math.min(400 / img.width, 400 / img.height);
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                document.getElementById('scan-line').classList.remove('hidden');
-                setTimeout(() => {
-                    const results = decodeImage(ctx.getImageData(0, 0, canvas.width, canvas.height));
-                    successScan(results);
-                }, 2500);
-            };
-            img.src = URL.createObjectURL(file);
-        };
+                ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        function showInfo() {
-            document.getElementById('info-modal').classList.remove('hidden');
+                const channels = [0, 1, 2]; // R, G, B
+                channels.forEach(idx => {
+                    const monoData = new Uint8ClampedArray(imgData.data.length);
+                    for (let i = 0; i < imgData.data.length; i += 4) {
+                        const v = imgData.data[i + idx];
+                        // Порог яркости для выделения канала
+                        const b = v < 120 ? 0 : 255; 
+                        monoData[i] = monoData[i+1] = monoData[i+2] = b;
+                        monoData[i+3] = 255;
+                    }
+                    const code = jsQR(monoData, canvas.width, canvas.height);
+                    if (code) {
+                        const resEl = document.getElementById(['res-r','res-g','res-b'][idx]);
+                        resEl.querySelector('span').textContent = code.data;
+                        resEl.classList.add('bg-white/20');
+                        document.getElementById('flash-layer').classList.add('flash');
+                        setTimeout(() => document.getElementById('flash-layer').classList.remove('flash'), 300);
+                    }
+                });
+            }
+            requestAnimationFrame(scanFrame);
         }
-
-        document.getElementById('info-modal').onclick = (e) => {
-            if (e.target.id === 'info-modal') {
-                document.getElementById('info-modal').classList.add('hidden');
-            }
-        };
-
-        // Приховати клавіатуру при кліку поза полем
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('textarea')) {
-                document.activeElement.blur();
-            }
-        });
-
-        // Ініціалізація
-        document.getElementById('qr-main').getContext('2d').fillStyle = '#ccc';
-        document.getElementById('qr-main').getContext('2d').fillRect(0, 0, 256, 256);
     </script>
 </body>
 </html>
