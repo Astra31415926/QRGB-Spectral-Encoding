@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>▣ QRGB ULTRA - Stable v3.1</title>
+    <title>▣ QRGB ULTRA - Final Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: system-ui, sans-serif; }
         canvas { image-rendering: pixelated; }
-        textarea { background: #0a0a0a; border: 1px solid #333; color: #fff; }
+        textarea { background: #0a0a0a; border: 1px solid #333; color: #fff; transition: all 0.3s; }
+        textarea:focus { border-color: #555; background: #111; }
         .scan-line { position:absolute; left:0; right:0; height:2px; background:#00ff41; box-shadow:0 0 15px #00ff41; animation:scan 3s linear infinite; z-index: 10; }
         @keyframes scan { 0%{top:0%} 100%{top:100%} }
         .flash-effect { animation: flash 0.3s ease-out forwards; }
@@ -21,63 +22,62 @@
         .active-b { background: #0088ff; box-shadow: 0 0 10px #0088ff; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen p-4">
+<body class="flex flex-col min-h-screen p-6">
 
-    <div class="flex items-center justify-between mb-4">
-        <canvas id="mini-qr" width="44" height="44" class="rounded bg-zinc-900"></canvas>
-        <h1 class="text-xs tracking-widest font-bold text-zinc-400 uppercase">Engine v3.1 Stable</h1>
+    <div class="flex items-center justify-between mb-6">
+        <canvas id="mini-qr" width="44" height="44" class="rounded bg-zinc-900 border border-white/10"></canvas>
+        <h1 class="text-[10px] tracking-[0.4em] font-black text-zinc-500 uppercase">QRGB ENGINE v3.5</h1>
         <div class="w-10"></div>
     </div>
 
-    <div class="space-y-2 mb-6">
-        <textarea id="r-text" class="w-full p-3 rounded-xl border-l-4 border-red-500 outline-none h-12 text-sm" placeholder="Red..."></textarea>
-        <textarea id="g-text" class="w-full p-3 rounded-xl border-l-4 border-green-500 outline-none h-12 text-sm" placeholder="Green..."></textarea>
-        <textarea id="b-text" class="w-full p-3 rounded-xl border-l-4 border-blue-500 outline-none h-12 text-sm" placeholder="Blue (Priority)..."></textarea>
+    <div class="space-y-3 mb-6">
+        <textarea id="r-text" class="w-full p-4 rounded-xl border-l-4 border-red-600 outline-none h-14 text-sm" placeholder="RED CHANNEL..."></textarea>
+        <textarea id="g-text" class="w-full p-4 rounded-xl border-l-4 border-green-600 outline-none h-14 text-sm" placeholder="GREEN CHANNEL..."></textarea>
+        <textarea id="b-text" class="w-full p-4 rounded-xl border-l-4 border-blue-600 outline-none h-14 text-sm" placeholder="BLUE (PRIORITY)..."></textarea>
     </div>
 
-    <div class="flex-1 flex items-center justify-center mb-6">
-        <div class="relative w-64 h-64 bg-zinc-950 rounded-3xl p-4 border border-white/5 shadow-2xl">
+    <div class="flex-1 flex items-center justify-center mb-10">
+        <div class="relative w-72 h-72 bg-zinc-950 rounded-[2rem] p-5 border border-white/5 shadow-2xl">
             <canvas id="qr-main" width="512" height="512" class="w-full h-full opacity-0 transition-opacity duration-500"></canvas>
         </div>
     </div>
 
-    <div class="space-y-3">
-        <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-bold rounded-2xl hidden active:scale-95 transition-transform">SAVE PNG</button>
-        <button onclick="toggleScanner()" class="w-full py-4 bg-zinc-800 text-white font-bold rounded-2xl border border-white/10 active:scale-95">OPEN SCANNER</button>
+    <div class="space-y-3 pb-4">
+        <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-black rounded-2xl hidden active:scale-95 transition-all text-xs tracking-widest uppercase">Save Result</button>
+        
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="toggleScanner()" class="py-4 bg-zinc-900 text-white font-bold rounded-2xl border border-white/10 active:scale-95 text-[10px] uppercase tracking-widest">Open Camera</button>
+            
+            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(event)">
+            <button onclick="document.getElementById('file-input').click()" class="py-4 bg-zinc-900 text-white font-bold rounded-2xl border border-white/10 active:scale-95 text-[10px] uppercase tracking-widest">Open Gallery</button>
+        </div>
     </div>
 
-    <div id="scanner-ui" class="fixed inset-0 z-[100] bg-black hidden flex flex-col p-6 overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">Optical Sensor Mode</span>
-            <button onclick="toggleScanner()" class="text-white bg-zinc-800 px-4 py-2 rounded-lg text-xs font-bold">CLOSE</button>
+    <div id="scanner-ui" class="fixed inset-0 z-[100] bg-black hidden flex flex-col p-6">
+        <div class="flex justify-between items-center mb-6">
+            <span class="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Optical Sensor</span>
+            <button onclick="toggleScanner()" class="text-white bg-zinc-800 px-6 py-2 rounded-xl text-[10px] font-black uppercase">Close</button>
         </div>
         
-        <div class="relative w-full aspect-square bg-zinc-950 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+        <div class="relative w-full aspect-square bg-zinc-950 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
             <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline></video>
             <canvas id="freeze-frame" class="absolute inset-0 w-full h-full object-cover hidden"></canvas>
             <div id="scan-line-view" class="scan-line"></div>
             <div id="flash-layer" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-50"></div>
         </div>
 
-        <div class="mt-4">
-            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(event)">
-            <button onclick="document.getElementById('file-input').click()" class="w-full py-3 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl text-xs font-bold uppercase tracking-widest">
-                📂 Select from Gallery
-            </button>
-        </div>
-
-        <div id="scan-results" class="mt-6 space-y-2">
-            <div id="res-r" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-white/5">
+        <div class="mt-8 space-y-3">
+            <div id="res-r" class="p-4 bg-zinc-900/60 rounded-2xl flex items-center gap-4 border border-white/5">
                 <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-500 truncate">R: Waiting...</span>
+                <span class="text-[10px] text-zinc-500 uppercase tracking-tighter">Red: Waiting...</span>
             </div>
-            <div id="res-g" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-white/5">
+            <div id="res-g" class="p-4 bg-zinc-900/60 rounded-2xl flex items-center gap-4 border border-white/5">
                 <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-500 truncate">G: Waiting...</span>
+                <span class="text-[10px] text-zinc-500 uppercase tracking-tighter">Green: Waiting...</span>
             </div>
-            <div id="res-b" class="p-3 bg-zinc-900/60 rounded-xl flex items-center gap-4 border border-blue-500/20">
+            <div id="res-b" class="p-4 bg-zinc-900/60 rounded-2xl flex items-center gap-4 border border-blue-500/20">
                 <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-400 font-bold truncate tracking-tight">B: Priority Mode</span>
+                <span class="text-[10px] text-zinc-400 font-black uppercase tracking-tighter">Blue: Priority Ready</span>
             </div>
         </div>
     </div>
@@ -93,15 +93,13 @@
             freeze: document.getElementById('freeze-frame')
         };
 
-        // AUDIO ENGINE
         const beep = (isFinal = false) => {
             try {
                 const ac = new (window.AudioContext || window.webkitAudioContext)();
                 const os = ac.createOscillator();
                 const gn = ac.createGain();
                 os.type = isFinal ? 'square' : 'sine';
-                os.frequency.setValueAtTime(isFinal ? 150 : 880, ac.currentTime);
-                if(isFinal) os.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.1);
+                os.frequency.setValueAtTime(isFinal ? 160 : 950, ac.currentTime);
                 gn.gain.setValueAtTime(0.1, ac.currentTime);
                 gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.15);
                 os.connect(gn); gn.connect(ac.destination);
@@ -109,7 +107,6 @@
             } catch(e) {}
         };
 
-        // GENERATOR
         function generateQR() {
             const texts = [els.r.value, els.g.value, els.b.value];
             if (!texts.some(t => t.trim())) {
@@ -150,7 +147,6 @@
 
         [els.r, els.g, els.b].forEach(el => el.addEventListener('input', generateQR));
 
-        // SCANNER
         let scanning = false;
         let scanCaptured = false;
         let results = {r:null, g:null, b:null};
@@ -190,39 +186,35 @@
                 cv.width = els.video.videoWidth; cv.height = els.video.videoHeight;
                 const cx = cv.getContext('2d');
                 cx.drawImage(els.video, 0, 0);
-                const img = cx.getImageData(0,0,cv.width,cv.height);
-
-                [0,1,2].forEach(idx => {
-                    const ch = ['r','g','b'][idx];
-                    if (results[ch]) return;
-
-                    const mono = new Uint8ClampedArray(img.data.length);
-                    for (let i = 0; i < img.data.length; i += 4) {
-                        const v = img.data[i + idx];
-                        const others = (img.data[i+(idx+1)%3] + img.data[i+(idx+2)%3]) / 2;
-                        // Ослабленный порог для лучшей чувствительности
-                        const isMain = v > 110 && v > others * 1.2;
-                        mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
-                        mono[i+3] = 255;
-                    }
-
-                    const code = jsQR(mono, cv.width, cv.height);
-                    if (code) {
-                        results[ch] = code.data;
-                        const el = document.getElementById('res-'+ch);
-                        el.querySelector('span').textContent = code.data;
-                        el.querySelector('.indicator').classList.add('active-'+ch);
-                        
-                        if (ch === 'b') {
-                            doCapture();
-                        } else {
-                            beep(false);
-                            if(!timer) timer = setTimeout(doCapture, 1500);
-                        }
-                    }
-                });
+                processImageData(cx.getImageData(0,0,cv.width,cv.height), cv.width, cv.height);
             }
             requestAnimationFrame(scanFrame);
+        }
+
+        function processImageData(img, w, h) {
+            [0,1,2].forEach(idx => {
+                const ch = ['r','g','b'][idx];
+                if (results[ch]) return;
+                const mono = new Uint8ClampedArray(img.data.length);
+                for (let i = 0; i < img.data.length; i += 4) {
+                    const v = img.data[i + idx];
+                    const others = (img.data[i+(idx+1)%3] + img.data[i+(idx+2)%3]) / 2;
+                    const isMain = v > 105 && v > others * 1.15;
+                    mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
+                    mono[i+3] = 255;
+                }
+                const code = jsQR(mono, w, h);
+                if (code) {
+                    results[ch] = code.data;
+                    const el = document.getElementById('res-'+ch);
+                    el.querySelector('span').textContent = code.data;
+                    el.querySelector('.indicator').classList.add('active-'+ch);
+                    if (ch === 'b') { doCapture(); } else {
+                        beep(false);
+                        if(!timer) timer = setTimeout(doCapture, 1500);
+                    }
+                }
+            });
         }
 
         function doCapture() {
@@ -243,311 +235,35 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = (ev) => {
                 const img = new Image();
                 img.onload = () => {
+                    // Принудительно открываем UI результатов (как камеру, но без видео)
+                    results = {r:null, g:null, b:null};
+                    document.getElementById('scanner-ui').classList.remove('hidden');
+                    document.getElementById('scan-line-view').classList.add('hidden');
+                    
                     const cv = document.createElement('canvas');
                     cv.width = img.width; cv.height = img.height;
                     const cx = cv.getContext('2d');
                     cx.drawImage(img, 0, 0);
-                    const data = cx.getImageData(0,0,cv.width,cv.height);
-                    // Прогоняем фото через декодер
-                    [0,1,2].forEach(idx => {
-                        const ch = ['r','g','b'][idx];
-                        const mono = new Uint8ClampedArray(data.data.length);
-                        for (let i = 0; i < data.data.length; i += 4) {
-                            const v = data.data[i+idx];
-                            const others = (data.data[i+(idx+1)%3] + data.data[i+(idx+2)%3])/2;
-                            const isMain = v > 90 && v > others * 1.1;
-                            mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
-                            mono[i+3] = 255;
-                        }
-                        const code = jsQR(mono, cv.width, cv.height);
-                        if (code) {
-                            results[ch] = code.data;
-                            const el = document.getElementById('res-'+ch);
-                            el.querySelector('span').textContent = code.data;
-                            el.querySelector('.indicator').classList.add('active-'+ch);
-                        }
-                    });
-                    doCapture();
+                    
+                    // Показываем фото вместо видео
+                    els.freeze.width = cv.width; els.freeze.height = cv.height;
+                    els.freeze.getContext('2d').drawImage(img, 0, 0);
+                    els.freeze.classList.remove('hidden');
+                    
+                    processImageData(cx.getImageData(0,0,cv.width,cv.height), cv.width, cv.height);
+                    beep(true);
                 };
-                img.src = event.target.result;
+                img.src = ev.target.result;
             };
             reader.readAsDataURL(file);
         }
 
         function saveQR() {
             const a = document.createElement('a');
-            a.download = 'QRGB_SYNC.png';
-            a.href = els.main.toDataURL();
-            a.click();
-        }
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>▣ QRGB ULTRA - Pro Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <style>
-        body { background: #000; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-        canvas { image-rendering: pixelated; }
-        textarea { background: #0a0a0a; border: 1px solid #222; color: #00ff41; font-size: 14px; }
-        .scan-line { position:absolute; left:0; right:0; height:2px; background:#00ff41; box-shadow:0 0 15px #00ff41; animation:scan 3s linear infinite; }
-        @keyframes scan { 0%{top:0%} 100%{top:100%} }
-        .flash-effect { animation: flash 0.4s ease-out forwards; }
-        @keyframes flash { 0%{opacity:1} 100%{opacity:0} }
-        .indicator { width: 10px; height: 10px; border-radius: 50%; background: #1a1a1a; transition: all 0.2s; }
-        .active-r { background: #ff004d; box-shadow: 0 0 10px #ff004d; }
-        .active-g { background: #00ff41; box-shadow: 0 0 10px #00ff41; }
-        .active-b { background: #0088ff; box-shadow: 0 0 10px #0088ff; }
-    </style>
-</head>
-<body class="p-4 pb-24">
-
-    <div class="flex items-center justify-between mb-6 pt-2">
-        <canvas id="mini-qr" width="40" height="40" class="rounded border border-white/10"></canvas>
-        <h1 class="text-[10px] tracking-[0.3em] font-bold text-zinc-500 uppercase text-center">Spectral Decoder v3.0</h1>
-        <div class="w-10 h-10"></div>
-    </div>
-
-    <div class="space-y-3 mb-8">
-        <textarea id="r-text" class="w-full p-3 rounded-lg border-l-2 border-red-500 outline-none h-14" placeholder="RED LAYER..."></textarea>
-        <textarea id="g-text" class="w-full p-3 rounded-lg border-l-2 border-green-500 outline-none h-14" placeholder="GREEN LAYER..."></textarea>
-        <textarea id="b-text" class="w-full p-3 rounded-lg border-l-2 border-blue-500 outline-none h-14" placeholder="BLUE LAYER (PRIORITY)..."></textarea>
-    </div>
-
-    <div class="flex justify-center mb-8">
-        <div class="relative w-64 h-64 bg-zinc-950 rounded-2xl p-3 border border-white/5 shadow-2xl">
-            <div id="qr-empty" class="absolute inset-0 flex items-center justify-center text-[8px] text-zinc-700 uppercase tracking-widest">Idle System</div>
-            <canvas id="qr-main" width="512" height="512" class="w-full h-full opacity-0 transition-opacity duration-700"></canvas>
-        </div>
-    </div>
-
-    <div class="fixed bottom-6 left-4 right-4 space-y-3 max-w-md mx-auto">
-        <button id="save-btn" onclick="saveQR()" class="w-full py-4 bg-white text-black font-black rounded-xl hidden text-xs">DOWNLOAD PNG</button>
-        <button onclick="toggleScanner()" class="w-full py-4 bg-zinc-900 border border-white/10 font-black rounded-xl text-xs tracking-widest uppercase">Launch Sensor</button>
-    </div>
-
-    <div id="scanner-ui" class="fixed inset-0 z-[100] bg-black hidden flex flex-col p-6">
-        <div class="flex justify-between items-center mb-4">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Optical Unit Active</span>
-            <button onclick="toggleScanner()" class="text-white text-xs px-2 py-1 bg-zinc-800 rounded">CLOSE</button>
-        </div>
-        
-        <div class="relative w-full aspect-square bg-zinc-950 rounded-2xl overflow-hidden border border-white/10">
-            <video id="video" class="absolute inset-0 w-full h-full object-cover"></video>
-            <canvas id="freeze-frame" class="absolute inset-0 w-full h-full object-cover hidden"></canvas>
-            <div id="scan-line-view" class="scan-line"></div>
-            <div id="flash-layer" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-50"></div>
-        </div>
-
-        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(event)">
-        <button onclick="document.getElementById('file-input').click()" class="mt-4 w-full py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 tracking-tighter uppercase">📂 Open Gallery Image</button>
-
-        <div class="mt-6 space-y-2">
-            <div id="res-r" class="p-3 bg-zinc-900/40 rounded-xl flex items-center gap-4">
-                <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-600 truncate uppercase">R-Channel: Wait</span>
-            </div>
-            <div id="res-g" class="p-3 bg-zinc-900/40 rounded-xl flex items-center gap-4">
-                <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-600 truncate uppercase">G-Channel: Wait</span>
-            </div>
-            <div id="res-b" class="p-3 bg-zinc-900/40 rounded-xl flex items-center gap-4 border border-blue-900/20">
-                <div class="indicator"></div>
-                <span class="text-[10px] text-zinc-400 truncate uppercase font-bold">B-Channel: Priority</span>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const els = {
-            r: document.getElementById('r-text'),
-            g: document.getElementById('g-text'),
-            b: document.getElementById('b-text'),
-            main: document.getElementById('qr-main'),
-            mini: document.getElementById('mini-qr'),
-            video: document.getElementById('video'),
-            freeze: document.getElementById('freeze-frame')
-        };
-
-        // AUDIO ENGINE
-        const beep = (type = 'short') => {
-            try {
-                const ac = new (window.AudioContext || window.webkitAudioContext)();
-                const os = ac.createOscillator();
-                const gn = ac.createGain();
-                os.type = type === 'short' ? 'sine' : 'square';
-                os.frequency.setValueAtTime(type === 'short' ? 880 : 150, ac.currentTime);
-                if(type !== 'short') os.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.15);
-                gn.gain.setValueAtTime(0.1, ac.currentTime);
-                gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + (type === 'short' ? 0.05 : 0.2));
-                os.connect(gn); gn.connect(ac.destination);
-                os.start(); os.stop(ac.currentTime + 0.2);
-            } catch(e) {}
-        };
-
-        // GENERATOR
-        function generateQR() {
-            const texts = [els.r.value, els.g.value, els.b.value];
-            if (!texts.some(t => t.trim())) {
-                els.main.style.opacity = 0;
-                document.getElementById('qr-empty').style.opacity = 1;
-                document.getElementById('save-btn').classList.add('hidden');
-                return;
-            }
-
-            let maxVer = 1;
-            texts.forEach(t => {
-                if(!t.trim()) return;
-                const tmp = qrcode(0, 'H'); tmp.addData(t); tmp.make();
-                const v = Math.floor((tmp.getModuleCount() - 17) / 4);
-                if (v > maxVer) maxVer = v;
-            });
-
-            const ctx = els.main.getContext('2d');
-            ctx.fillStyle = "#000"; ctx.fillRect(0,0,512,512);
-            ctx.globalCompositeOperation = "lighten";
-
-            texts.forEach((text, i) => {
-                if(!text.trim()) return;
-                const qr = qrcode(maxVer, 'H'); qr.addData(text); qr.make();
-                const mod = 512 / qr.getModuleCount();
-                ctx.fillStyle = i === 0 ? "#FF0000" : (i === 1 ? "#00FF00" : "#0000FF");
-                for (let r = 0; r < qr.getModuleCount(); r++) {
-                    for (let c = 0; c < qr.getModuleCount(); c++) {
-                        if (qr.isDark(r, c)) ctx.fillRect(c * mod, r * mod, mod, mod);
-                    }
-                }
-            });
-
-            ctx.globalCompositeOperation = "source-over";
-            els.main.style.opacity = 1;
-            document.getElementById('qr-empty').style.opacity = 0;
-            document.getElementById('save-btn').classList.remove('hidden');
-            els.mini.getContext('2d').drawImage(els.main, 0, 0, 40, 40);
-        }
-
-        [els.r, els.g, els.b].forEach(el => el.addEventListener('input', generateQR));
-
-        // SCANNER LOGIC
-        let scanning = false;
-        let scanCaptured = false;
-        let results = {r:null, g:null, b:null};
-        let fallbackTimer = null;
-
-        async function toggleScanner() {
-            const ui = document.getElementById('scanner-ui');
-            if (scanning) {
-                scanning = false;
-                if (els.video.srcObject) els.video.srcObject.getTracks().forEach(t => t.stop());
-                ui.classList.add('hidden');
-                els.freeze.classList.add('hidden');
-                document.getElementById('scan-line-view').classList.remove('hidden');
-            } else {
-                scanCaptured = false;
-                results = {r:null, g:null, b:null};
-                ['r','g','b'].forEach(ch => {
-                    const el = document.getElementById('res-'+ch);
-                    el.querySelector('span').textContent = ch.toUpperCase() + '-Channel: Wait';
-                    el.querySelector('.indicator').className = 'indicator';
-                });
-                ui.classList.remove('hidden');
-                try {
-                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                    els.video.srcObject = s;
-                    els.video.play();
-                    scanning = true;
-                    requestAnimationFrame(scanFrame);
-                } catch (e) { alert("Camera Lock"); ui.classList.add('hidden'); }
-            }
-        }
-
-        function scanFrame() {
-            if (!scanning || scanCaptured) return;
-            if (els.video.readyState === els.video.HAVE_ENOUGH_DATA) {
-                const cv = document.createElement('canvas');
-                cv.width = els.video.videoWidth; cv.height = els.video.videoHeight;
-                const cx = cv.getContext('2d');
-                cx.drawImage(els.video, 0, 0);
-                decodeStream(cx.getImageData(0,0,cv.width,cv.height), cv.width, cv.height);
-            }
-            requestAnimationFrame(scanFrame);
-        }
-
-        function decodeStream(img, w, h) {
-            [0,1,2].forEach(idx => {
-                const ch = ['r','g','b'][idx];
-                if (results[ch]) return;
-
-                const mono = new Uint8ClampedArray(img.data.length);
-                for (let i = 0; i < img.data.length; i += 4) {
-                    const v = img.data[i + idx];
-                    const others = (img.data[i+(idx+1)%3] + img.data[i+(idx+2)%3]) / 2;
-                    mono[i] = mono[i+1] = mono[i+2] = (v > 130 && v > others * 1.4) ? 0 : 255;
-                    mono[i+3] = 255;
-                }
-
-                const code = jsQR(mono, w, h);
-                if (code) {
-                    results[ch] = code.data;
-                    const el = document.getElementById('res-'+ch);
-                    el.querySelector('span').textContent = code.data;
-                    el.querySelector('.indicator').classList.add('active-'+ch);
-                    
-                    if (ch === 'b') {
-                        doCapture(); // Мгновенный захват по Синему
-                    } else {
-                        beep('short');
-                        if(!fallbackTimer) fallbackTimer = setTimeout(doCapture, 1200);
-                    }
-                }
-            });
-        }
-
-        function doCapture() {
-            if (scanCaptured || !scanning) return;
-            scanCaptured = true;
-            clearTimeout(fallbackTimer);
-            fallbackTimer = null;
-
-            els.freeze.width = els.video.videoWidth;
-            els.freeze.height = els.video.videoHeight;
-            els.freeze.getContext('2d').drawImage(els.video, 0, 0);
-            els.freeze.classList.remove('hidden');
-            document.getElementById('scan-line-view').classList.add('hidden');
-            document.getElementById('flash-layer').classList.add('flash-effect');
-            beep('long');
-            setTimeout(() => document.getElementById('flash-layer').classList.remove('flash-effect'), 500);
-        }
-
-        async function handleFile(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const img = new Image();
-            img.onload = () => {
-                const cv = document.createElement('canvas');
-                cv.width = img.width; cv.height = img.height;
-                const cx = cv.getContext('2d');
-                cx.drawImage(img, 0, 0);
-                decodeStream(cx.getImageData(0,0,cv.width,cv.height), cv.width, cv.height);
-                doCapture();
-            };
-            img.src = URL.createObjectURL(file);
-        }
-
-        function saveQR() {
-            const a = document.createElement('a');
-            a.download = 'QRGB_SCAN.png';
-            a.href = els.main.toDataURL();
-            a.click();
+            a.download = 'QRGB_PRO.png'; a.href = els.main.toDataURL(); a.click();
         }
     </script>
 </body>
