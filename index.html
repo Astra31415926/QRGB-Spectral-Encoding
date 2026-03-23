@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>▣ QRGB ULTRA - Pro Engine v3.9</title>
+    <title>▣ QRGB ULTRA - Pro Engine v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -25,7 +25,7 @@
 
     <div class="flex items-center justify-between mb-6">
         <canvas id="mini-qr" width="44" height="44" class="rounded bg-zinc-900 border border-white/10"></canvas>
-        <h1 class="text-[10px] tracking-[0.4em] font-black text-zinc-500 uppercase text-center flex-1">QRGB Engine v3.9</h1>
+        <h1 class="text-[10px] tracking-[0.4em] font-black text-zinc-500 uppercase text-center flex-1">QRGB Engine v4.0</h1>
         <div class="w-10"></div>
     </div>
 
@@ -185,24 +185,31 @@
             requestAnimationFrame(scanFrame);
         }
 
+        /**
+         * v4.0 Logic: Simple Threshold Binarization
+         * Uses the proven formula: v < 120 ? 0 : 255
+         * Includes jsQR inversion attempt to handle RGB layers correctly.
+         */
         function processImageData(img, w, h) {
             let foundAny = false;
+            
             [0, 1, 2].forEach(idx => {
                 const ch = ['r', 'g', 'b'][idx];
-                if (results[ch]) return;
+                if (results[ch]) return; // Skip if already found
 
                 const mono = new Uint8ClampedArray(img.data.length);
+                
+                // Binarization Loop
                 for (let i = 0; i < img.data.length; i += 4) {
-                    const r = img.data[i], g = img.data[i + 1], b = img.data[i + 2];
-                    let val = img.data[i + idx];
-                    let others = (idx === 0) ? (g+b)/2 : (idx === 1 ? (r+b)/2 : (r+g)/2);
-                    
-                    const isMain = val > 70 && val > others * 1.15;
-                    mono[i] = mono[i+1] = mono[i+2] = isMain ? 0 : 255;
+                    const v = img.data[i + idx]; // Value of current channel
+                    const b = v < 120 ? 0 : 255; // Simple threshold
+                    mono[i] = mono[i+1] = mono[i+2] = b;
                     mono[i+3] = 255;
                 }
 
-                const code = jsQR(mono, w, h);
+                // Scan with inversion attempts to handle both white-on-black and black-on-white
+                const code = jsQR(mono, w, h, { inversionAttempts: "attemptBoth" });
+                
                 if (code) {
                     results[ch] = code.data;
                     foundAny = true;
@@ -210,6 +217,7 @@
                     el.querySelector('span').textContent = code.data;
                     el.querySelector('.indicator').className = 'indicator active-'+ch;
                     
+                    // Logic: Stop if Blue found OR all found
                     if (ch === 'b' || (results.r && results.g && results.b)) {
                         doCapture();
                     } else {
@@ -239,6 +247,11 @@
             scanning = false;
         }
 
+        /**
+         * v4.0 File Handler
+         * 1. Smart display fitting (object-contain).
+         * 2. Offscreen analysis canvas 1024x1024 for details.
+         */
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -247,31 +260,46 @@
                 const img = new Image();
                 img.onload = () => {
                     results = {r:null, g:null, b:null};
+                    scanCaptured = false; 
+                    timer = null;
                     document.getElementById('scanner-ui').classList.remove('hidden');
                     
+                    // 1. Visual Display (Fit into 600x600 container)
                     const displaySize = 600;
                     els.freeze.width = displaySize;
                     els.freeze.height = displaySize;
                     const fctx = els.freeze.getContext('2d');
-                    fctx.fillStyle = "#000"; fctx.fillRect(0, 0, displaySize, displaySize);
+                    fctx.fillStyle = "#000"; 
+                    fctx.fillRect(0, 0, displaySize, displaySize);
                     
                     const scale = Math.min(displaySize / img.width, displaySize / img.height);
-                    const nw = img.width * scale, nh = img.height * scale;
+                    const nw = img.width * scale;
+                    const nh = img.height * scale;
                     fctx.drawImage(img, (displaySize - nw) / 2, (displaySize - nh) / 2, nw, nh);
                     
                     els.freeze.classList.remove('hidden');
                     els.video.classList.add('hidden');
                     document.getElementById('scan-line-view').classList.add('hidden');
                     
+                    // 2. Analysis Canvas (Fixed 1024x1024 for scanning precision)
                     const scanSize = 1024;
                     const scanCanvas = document.createElement('canvas');
-                    scanCanvas.width = scanSize; scanCanvas.height = scanSize;
+                    scanCanvas.width = scanSize; 
+                    scanCanvas.height = scanSize;
                     const sctx = scanCanvas.getContext('2d');
-                    sctx.filter = 'contrast(1.2) brightness(1.1)';
-                    sctx.drawImage(img, 0, 0, scanSize, scanSize);
                     
+                    // Fit image into 1024x1024 maintaining aspect ratio
+                    const sScale = Math.min(scanSize / img.width, scanSize / img.height);
+                    const sNW = img.width * sScale;
+                    const sNH = img.height * sScale;
+                    
+                    sctx.fillStyle = "#000"; // Fill background for letterboxing
+                    sctx.fillRect(0, 0, scanSize, scanSize);
+                    sctx.drawImage(img, (scanSize - sNW) / 2, (scanSize - sNH) / 2, sNW, sNH);
+                    
+                    // 3. Run processing
                     if(processImageData(sctx.getImageData(0,0,scanSize,scanSize), scanSize, scanSize)) {
-                        beep(true);
+                        // If found, simulate capture effect
                         document.getElementById('flash-layer').classList.add('flash-effect');
                         setTimeout(() => document.getElementById('flash-layer').classList.remove('flash-effect'), 400);
                     }
