@@ -41,3 +41,4 @@ Licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details
 
 **Author:** Mykhailo Kashkarov  
 **Web:** [astra31415926.github.io](https://astra31415926.github.io/)
+[Download my vCard](contact.vcf)
