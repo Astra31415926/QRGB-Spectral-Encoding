@@ -24,10 +24,10 @@ This project sits at the intersection of **Science-Art** and Optical Physics. It
 
 ### 📚 Publications & Research
 
-* [Zenodo: Spectral Integrity Research](https://zenodo.org/...)
-* [Medium: SCI Universal Model & Normalization](https://medium.com/...)
-* [Telegra.ph: White Paper (UA Language)](https://telegra.ph/...)
-* [📇 Download my vCard](vcard.vcf)
+* **Zenodo:** [Spectral Integrity Research & Data Records](https://zenodo.org/records/18895764)
+* **Medium:** [SCI Universal Model: Deterministic Spectral Response Normalization](https://medium.com/@Bakminsterfuler/sci-universal-model-deterministic-spectral-response-normalization-905efe92e766)
+* **Telegra.ph (White Paper):** [RSS: Reflectance Synchronized System](https://telegra.ph/RSS-Reflectance-Synchronized-System-02-19)
+* **📇 Download:** [Get my vCard Contact File](vcard.vcf)
 ---
 
 ### 🛠 Local Installation
